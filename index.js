@@ -1,8 +1,9 @@
 const fs = require('fs');
 const BuffScrape = require('./lib/buff_id_scraper');
+const CSGOItems = require('./lib/csgo_game_data');
 const { ensureSlug } = require('./lib/util');
 
-const init = async (item_name) => {
+const retriveBuffID = async (item_name) => {
     const scraper = new BuffScrape(item_name);
     await scraper.fetchAllItems();
 
@@ -18,11 +19,11 @@ const init = async (item_name) => {
         }
     });
 
-    console.log(`[${item_name}] Writing file`);
-
+    
     if (!fs.existsSync('./log')){
         fs.mkdirSync('./log');
     }
+    console.log(`[${item_name}] Saving as JSON`);
     fs.writeFile(`./log/${item_name}.json`, JSON.stringify({
         data: formattedItems,
         timestamp: scraper.getUnix()
@@ -31,10 +32,20 @@ const init = async (item_name) => {
             console.error(`Error writing file for ${item_name}`);
             throw err;
         }
-
-        console.log(`[${item_name}] saved as JSON`);
-
     })
 }
 
-init('weapon_knife_m9_bayonet');
+const csgo_items = async () => {
+    const csgo = new CSGOItems('en');
+    await csgo.retriveData();
+
+    const weapons = csgo.getPaintableWeapons();
+    // console.log("items", csgo.getPaintableWeapons());
+    for (const weapon of weapons) {
+        console.log(weapon.name);
+        await retriveBuffID(weapon.name);
+    }
+    console.log("Complete!");
+}
+
+csgo_items();
