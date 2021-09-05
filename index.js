@@ -15,7 +15,9 @@ const retriveBuffID = async (item_name) => {
         formattedItems[ensureSlug( item.name)] = {
             'buff_id': item.id,
             'buff_price_cny': item.sell_reference_price,
-            'steam_price_cny': item.goods_info.steam_price_cny
+            'steam_price_cny': item.goods_info.steam_price_cny,
+            'quantity': item.sell_num,
+            'type': item.goods_info?.info?.tags?.type?.internal_name
         }
     });
 
@@ -35,17 +37,28 @@ const retriveBuffID = async (item_name) => {
     })
 }
 
-const csgo_items = async () => {
+const initItems = async () => {
     const csgo = new CSGOItems('en');
     await csgo.retriveData();
 
     const weapons = csgo.getPaintableWeapons();
-    // console.log("items", csgo.getPaintableWeapons());
     for (const weapon of weapons) {
-        console.log(weapon.name);
         await retriveBuffID(weapon.name);
     }
     console.log("Complete!");
 }
 
-csgo_items();
+// initItems();
+
+const combineItems = () => {
+    fs.readdir('./log', {}, (err, files) => {
+        for (const file of files) {
+            fs.readFile(`./log/${file}`, {}, (err, _data) => {
+                const content = JSON.parse(_data);
+                console.log(content.data);
+            })
+        }
+    }) 
+}
+
+combineItems();
