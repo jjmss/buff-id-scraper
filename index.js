@@ -1,14 +1,26 @@
 const fs = require('fs');
 const { BuffScrape, BuffItem } = require('./lib/buff_id_scraper');
+const { BuffUI } = require('./lib/buff_userface');
 const CSGOItems = require('./lib/csgo_game_data');
 const { ensureSlug, createFile } = require('./lib/util');
+require('dotenv').config();
 
 if (!fs.existsSync('./data')){
     fs.mkdirSync('./data');
 }
 
-const retriveBuffID = async (item_name) => {
-    const scraper = new BuffScrape(item_name);
+const BuffUser = new BuffUI({
+    username: process.env.steam_username,
+    password: process.env.steam_password
+}, {headless: true});
+
+const getToken = async () => {
+    await BuffUser.retriveSessionToken();
+    return BuffUser.getSessionToken();
+}
+
+const retriveBuffID = async (item_name, session_cookie) => {
+    const scraper = new BuffScrape(item_name, session_cookie);
     await scraper.fetchAllItems();
 
     const items = scraper.getAllitems();
@@ -36,7 +48,12 @@ const retriveBuffID = async (item_name) => {
 
 }
 
-const initItems = async () => {
+/**
+ * 
+ * @param {string} token The session token so the scraper can get access to the endpoints
+ * @description Gets all the csgo items, and retrives all the buff id's for each weapon
+ */
+const initItems = async (token) => {
     const csgo = new CSGOItems('en');
     console.time('Retrive Weapons');
     await csgo.retriveData();
@@ -44,14 +61,23 @@ const initItems = async () => {
 
     const weapons = csgo.getPaintableWeapons();
     console.time('Retrive data');
-    for (const weapon of weapons) {
-        await retriveBuffID(weapon.name);
+    try {
+        for (const weapon of weapons) {
+            await retriveBuffID(weapon.name, token);
+        }
+    } catch(err) {
+        if (err.code = 1) {
+            console.log(err.message);
+            console.log("Getting new session token");
+            const _token = await getToken();
+            console.log("Trying again...")
+            initItems(_token)
+        }
+        console.log(err)
     }
     console.log("Complete!");
     console.timeEnd('Retrive data');
 }
-
-// initItems();
 
 const combineItems = () => {
     fs.readdir('./data/id', {}, (err, files) => {
@@ -66,8 +92,14 @@ const combineItems = () => {
 
 // combineItems();
 
-const scrapeItemPrices = async (id) => {
-    const item = new BuffItem(id);
+
+/**
+ * 
+ * @param { Number } id The Buff id of the item
+ * @param { String } session_cookie The session cookie in order to get access to the endpoint
+ */
+const scrapeItemPrices = async (id, session_cookie) => {
+    const item = new BuffItem(id, session_cookie);
     await item.fetchAllListings();
     const itemInfo = item.getItemInfo();
     const listings = item.getListings();
@@ -117,5 +149,16 @@ const scrapeItemPrices = async (id) => {
     
 }
 
-scrapeItemPrices(42579);
-scrapeItemPrices(759246);
+(async () => {
+
+    //session cookie in order to get access to all the data
+    // const token = await getToken();
+    const token = '';
+
+    //Retrives all items from csgo and getts all the buff id's for all the skins
+    initItems(token);
+    await scrapeItemPrices(42579, token);
+    await scrapeItemPrices(759246, token);
+
+
+})()
