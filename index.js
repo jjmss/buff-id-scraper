@@ -15,8 +15,7 @@ const BuffUser = new BuffUI({
 }, {headless: true});
 
 const getToken = async () => {
-    await BuffUser.retriveSessionToken();
-    return BuffUser.getSessionToken();
+    return await BuffUser.getSessionToken();
 }
 
 const retriveBuffID = async (item_name, session_cookie) => {
@@ -28,7 +27,7 @@ const retriveBuffID = async (item_name, session_cookie) => {
     const formattedItems = new Object;
     console.log(`[${item_name}] Formatting and saving`);
     items.forEach(item => {
-        formattedItems[ensureSlug( item.name)] = {
+        formattedItems[ensureSlug(item.name)] = {
             'buff_id': item.id,
             'buff_price_cny': item.sell_reference_price,
             'steam_price_cny': item.goods_info.steam_price_cny,
@@ -149,16 +148,22 @@ const scrapeItemPrices = async (id, session_cookie) => {
     
 }
 
+let token = null
+
 (async () => {
 
     //session cookie in order to get access to all the data
-    // const token = await getToken();
-    const token = '';
+    if (token === null) {
+        token = await getToken()
+    }
 
-    //Retrives all items from csgo and getts all the buff id's for all the skins
-    initItems(token);
-    await scrapeItemPrices(42579, token);
-    await scrapeItemPrices(759246, token);
+
+    // await retriveBuffID("weapon_ak47", token);
+
+    // Retrives all items from csgo and getts all the buff id's for all the skins
+    await initItems(token);
+    // await scrapeItemPrices(42579, token);
+    // await scrapeItemPrices(759246, token);
 
 
 })()
